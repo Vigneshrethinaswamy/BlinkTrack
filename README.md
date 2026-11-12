@@ -1,131 +1,101 @@
-# BlinkTrack — Real-Time Eye Blink Detection
+# BlinkTrack — Real-Time Eye Blink and Wink Detection
 
-BlinkTrack is a small computer vision project that uses a laptop webcam, OpenCV, and MediaPipe Face Mesh to detect and count complete eye blinks in real time.
+BlinkTrack is a local computer-vision demo that uses a webcam, OpenCV, and MediaPipe Face Mesh to track each eye independently, count bilateral blinks, and distinguish one-eye winks.
 
 ## Features
 
-- Captures live video from the default webcam.
-- Detects facial landmarks using MediaPipe Face Mesh.
-- Extracts six landmarks around each eye.
-- Calculates the Eye Aspect Ratio (EAR) for both eyes.
-- Counts a blink only after the eyes close for a minimum number of frames and reopen.
-- Displays the live blink count, EAR, eye state, and FPS.
-- Exits safely when you press **Q** or **Esc**.
+- Real-time webcam capture and face landmark tracking.
+- Separate Eye Aspect Ratio (EAR) measurements for the left and right eyes.
+- Bilateral blink counting with a short synchronization window.
+- Separate left-wink and right-wink counters; closing one eye does not count as a bilateral blink.
+- Hysteresis thresholds to reduce state flicker near the EAR boundary.
+- Live face-tracking status, per-eye EAR/state, blink/wink counts, and FPS.
+- Q/Esc to quit and R to reset all session counts.
+- Local processing only; frames are not uploaded or saved.
 
 ## How it works
 
-1. OpenCV reads a frame from the webcam.
-2. The frame is mirrored and converted from BGR to RGB.
-3. MediaPipe Face Mesh locates facial landmarks.
-4. BlinkTrack extracts the six landmark points for each eye.
-5. It calculates the EAR for each eye and averages the two values.
-6. If EAR stays below the configured threshold for enough consecutive frames, the eyes are marked closed.
-7. When the eyes reopen, the blink counter increases once.
+1. OpenCV captures and mirrors the webcam frame.
+2. MediaPipe Face Mesh estimates facial landmarks.
+3. BlinkTrack extracts six landmarks around each eye and calculates two independent EAR values.
+4. Each eye has its own open/closed state, using a close threshold and a slightly higher reopen threshold.
+5. When both eyes begin closing within the synchronization window and both reopen, one bilateral blink is counted.
+6. If only one eye closes, the event is classified as a left or right wink after the pairing window expires.
 
-The Eye Aspect Ratio is:
+EAR = (||p2-p6|| + ||p3-p5||) / (2 * ||p1-p4||)
 
-\[
-EAR = \frac{\|p_2-p_6\| + \|p_3-p_5\|}{2\|p_1-p_4\|}
-\]
-
-A lower EAR generally indicates a more closed eye. The threshold is configurable because camera angle, face shape, and lighting can affect the measured value.
+A lower EAR generally indicates a more closed eye. The left and right values are evaluated separately; they are not averaged before classification.
 
 ## Requirements
 
 - Windows, macOS, or Linux
-- Python 3.11 recommended
+- Python 3.11
 - A working webcam
 
 ## Setup (Windows PowerShell)
 
-Clone the repository, open PowerShell in the project folder, and run:
+In the project folder, run:
 
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-python main.py
-```
+    .\setup_and_run.ps1
 
-If PowerShell blocks activation, run this once in the current terminal:
+If PowerShell blocks script execution, run:
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\.venv\Scripts\Activate.ps1
-```
+    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+    .\setup_and_run.ps1
 
-## Run
+The script creates/uses the project virtual environment, installs dependencies, runs unit tests, and launches the webcam demo.
 
-```bash
-python main.py
-```
+To run manually after setup:
 
-Or on Windows, run the included setup script to create the virtual environment, install dependencies, run the unit tests, and launch the webcam app:
+    .\.venv\Scripts\Activate.ps1
+    python main.py
 
-```powershell
-.\setup_and_run.ps1
-```
+Run tests without opening the webcam:
 
-To run the tests separately:
+    python -m pytest -q
 
-```bash
-pip install -r requirements-dev.txt
-python -m pytest -q
-```
+## Controls and display
 
-The first run may take a little longer while MediaPipe initializes. Allow camera access if your operating system asks for permission.
-
-### Controls
-
-- **Q** or **Esc** — quit
-- **R** — reset the blink counter
+- Q or Esc — quit
+- R — reset blink and wink counts
+- Cyan/yellow eye outlines — separate eye landmark tracks
+- FACE: TRACKED — MediaPipe currently sees a face
 
 ## Calibration
 
-The default EAR threshold is `0.21` and the minimum closed duration is `2` consecutive frames. These are starting values, not universal constants.
+Initial defaults in blink_detector.py:
 
-If blinks are missed, try increasing `EAR_THRESHOLD` slightly (for example, to `0.23`). If normal open eyes are incorrectly treated as closed, decrease it (for example, to `0.19`). Change the constants near the top of `blink_detector.py`, then restart the program.
+- EAR close threshold: 0.21
+- EAR reopen threshold: 0.24
+- Bilateral synchronization window: 5 frames
 
-For a fair demonstration:
-- Keep your face visible and reasonably centered.
-- Use steady, front-facing lighting.
-- Avoid extreme camera angles.
-- Look toward the webcam while testing.
+The reopen threshold is intentionally higher than the close threshold to prevent rapid state switching when EAR fluctuates near the boundary. The synchronization window allows the two eyes to begin closing a few frames apart.
+
+These are starting values, not universal constants. If an eye is consistently classified incorrectly while open, inspect its displayed EAR and adjust the close/open thresholds together. Use steady front-facing lighting and keep the face reasonably centered. Very low frame rates, glasses, occlusion, and extreme head angles can still reduce reliability.
 
 ## Project structure
 
-```text
-BlinkTrack/
-├── main.py
-├── blink_detector.py
-├── requirements.txt
-├── requirements-dev.txt
-├── setup_and_run.ps1
-├── utils/
-│   ├── __init__.py
-│   ├── blink_counter.py
-│   └── eye_aspect_ratio.py
-├── tests/
-│   └── test_blink_detector.py
-├── .gitignore
-└── README.md
-```
+    BlinkTrack/
+    ├── main.py
+    ├── blink_detector.py
+    ├── requirements.txt
+    ├── requirements-dev.txt
+    ├── setup_and_run.ps1
+    ├── utils/
+    │   ├── __init__.py
+    │   ├── blink_counter.py
+    │   └── eye_aspect_ratio.py
+    ├── tests/
+    │   └── test_blink_detector.py
+    └── README.md
 
 ## Limitations
 
-- This is a simple single-face blink counter, not a medical device.
-- It counts completed close-and-reopen events; it does not identify a person's identity.
-- Glasses, occlusion, poor lighting, and large head movements can reduce landmark accuracy.
-- The counter is session-based and resets when the program is restarted.
+- Single-face, single-webcam demonstration; it does not identify people.
+- A wink is an eye closure classified as unilateral, not an intent or emotion label.
+- EAR is a geometric estimate and can be affected by glasses, lighting, head pose, and landmark jitter.
+- This is an educational computer-vision project, not a medical or drowsiness diagnosis tool.
 
 ## Technologies
 
-- Python
-- OpenCV
-- MediaPipe Face Mesh
-- NumPy
-
-## Academic note
-
-The project demonstrates webcam acquisition, facial landmark detection, geometric feature extraction, threshold-based event detection, and real-time visual feedback.
+Python, OpenCV, MediaPipe Face Mesh, NumPy, and pytest.
