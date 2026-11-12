@@ -62,6 +62,7 @@ class BlinkCounter:
         candidates = [other for other in self._events
                       if other is not event and other["side"] == opposite
                       and other["pair"] is None
+                      and other["end"] is None
                       and abs(other["start"] - event["start"]) <= self.sync_window_frames]
         if candidates:
             other = min(candidates, key=lambda item: abs(item["start"] - event["start"]))
