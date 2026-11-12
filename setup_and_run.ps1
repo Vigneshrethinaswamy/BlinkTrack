@@ -2,20 +2,65 @@
 $ErrorActionPreference = "Stop"
 Set-Location -Path $PSScriptRoot
 
-$PythonLauncher = Get-Command py -ErrorAction SilentlyContinue
-if (-not $PythonLauncher) {
-    throw "Python Launcher (py.exe) was not found. Install Python 3.11 from python.org and enable the launcher."
+# Find a working Python 3.11 interpreter. The Windows Python Launcher (py.exe)
+# is optional; some installations expose only python.exe on PATH.
+$PythonExe = $null
+$PythonPrefixArgs = @()
+$candidates = @()
+
+$pyCommand = Get-Command py -ErrorAction SilentlyContinue
+if ($pyCommand) {
+    $candidates += [PSCustomObject]@{ Exe = $pyCommand.Source; Prefix = @("-3.11") }
 }
 
-& py -3.11 --version
-if ($LASTEXITCODE -ne 0) {
-    throw "Python 3.11 is required. Install it, then run this script again."
+foreach ($commandName in @("python", "python3")) {
+    $command = Get-Command $commandName -ErrorAction SilentlyContinue
+    if ($command) {
+        $candidates += [PSCustomObject]@{ Exe = $command.Source; Prefix = @() }
+    }
 }
 
-$VenvPython = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+# Common per-user and machine-wide Python 3.11 install locations.
+$commonPaths = @(
+    (Join-Path $env:LOCALAPPDATA "Programs\Python\Python311\python.exe"),
+    (Join-Path $env:ProgramFiles "Python311\python.exe"),
+    "C:\Python311\python.exe"
+)
+foreach ($path in $commonPaths) {
+    if ($path -and (Test-Path $path)) {
+        $candidates += [PSCustomObject]@{ Exe = $path; Prefix = @() }
+    }
+}
+
+foreach ($candidate in $candidates) {
+    try {
+        $version = & $candidate.Exe @($candidate.Prefix) -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+        if ($LASTEXITCODE -eq 0 -and "$version".Trim() -eq "3.11") {
+            $PythonExe = $candidate.Exe
+            $PythonPrefixArgs = @($candidate.Prefix)
+            break
+        }
+    }
+    catch {
+        # Try the next discovered interpreter.
+    }
+}
+
+if (-not $PythonExe) {
+    Write-Host "Could not find Python 3.11." -ForegroundColor Red
+    Write-Host "Checked: py -3.11, python, python3, and common Python311 install paths."
+    Write-Host "Run 'python --version' and 'where.exe python' to inspect your installation."
+    throw "Install Python 3.11 or add its python.exe to PATH, then rerun this script."
+}
+
+$pythonLabel = & $PythonExe @PythonPrefixArgs --version
+Write-Host "Using $pythonLabel ($PythonExe)" -ForegroundColor Green
+
+$VenvPath = Join-Path $PSScriptRoot ".venv"
+$VenvPython = Join-Path $VenvPath "Scripts\python.exe"
 if (-not (Test-Path $VenvPython)) {
     Write-Host "Creating project virtual environment..." -ForegroundColor Cyan
-    & py -3.11 -m venv (Join-Path $PSScriptRoot ".venv")
+    & $PythonExe @PythonPrefixArgs -m venv $VenvPath
     if ($LASTEXITCODE -ne 0) { throw "Virtual environment creation failed." }
 }
 
