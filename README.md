@@ -100,6 +100,8 @@ BlinkTrack/
 ├── main.py
 ├── blink_detector.py
 ├── requirements.txt
+├── requirements-dev.txt
+├── setup_and_run.ps1
 ├── utils/
 │   ├── __init__.py
 │   ├── blink_counter.py
