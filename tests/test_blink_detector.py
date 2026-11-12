@@ -37,9 +37,9 @@ def test_synchronous_fast_blink_counts_once():
 
 def test_asynchronous_bilateral_blink_within_window_counts_once():
     counter = BlinkCounter(sync_window_frames=5)
-    counter.update(0.18, 0.30)
-    counter.update(0.30, 0.18)
-    counter.update(0.30, 0.30)
+    counter.update(0.18, 0.30)  # left closes first
+    counter.update(0.18, 0.18)  # right closes while left remains closed
+    counter.update(0.30, 0.30)  # both reopen
     assert counter.blink_count == 1
     assert counter.left_wink_count == 0
     assert counter.right_wink_count == 0
@@ -110,3 +110,16 @@ def test_reset_clears_counts_and_tracking_state():
     assert counter.left_wink_count == 0
     assert counter.right_wink_count == 0
     assert counter.update(0.30, 0.30) == ("Open", "Open")
+
+
+def test_sequential_non_overlapping_winks_are_not_paired_as_a_blink():
+    counter = BlinkCounter(sync_window_frames=5)
+    counter.update(0.18, 0.30)
+    counter.update(0.30, 0.30)  # left wink ends
+    counter.update(0.30, 0.18)  # right closes after left has reopened
+    counter.update(0.30, 0.30)
+    for _ in range(6):
+        counter.update(0.30, 0.30)
+    assert counter.blink_count == 0
+    assert counter.left_wink_count == 1
+    assert counter.right_wink_count == 1
