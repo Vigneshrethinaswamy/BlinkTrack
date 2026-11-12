@@ -61,6 +61,19 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 python main.py
 ```
 
+Or on Windows, run the included setup script to create the virtual environment, install dependencies, run the unit tests, and launch the webcam app:
+
+```powershell
+.\setup_and_run.ps1
+```
+
+To run the tests separately:
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
 The first run may take a little longer while MediaPipe initializes. Allow camera access if your operating system asks for permission.
 
 ### Controls
@@ -89,6 +102,7 @@ BlinkTrack/
 ├── requirements.txt
 ├── utils/
 │   ├── __init__.py
+│   ├── blink_counter.py
 │   └── eye_aspect_ratio.py
 ├── tests/
 │   └── test_blink_detector.py
