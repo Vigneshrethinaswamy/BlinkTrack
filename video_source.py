@@ -37,11 +37,14 @@ class VideoSource:
 
     @staticmethod
     def _open_capture(source: int | str) -> Any:
+        capture = cv2.VideoCapture(source)
+        if capture.isOpened():
+            return capture
+        capture.release()
+
+        # Fall back to DirectShow on Windows if the default backend cannot open it.
         if isinstance(source, int) and os.name == "nt":
-            capture = cv2.VideoCapture(source, cv2.CAP_DSHOW)
-            if capture.isOpened():
-                return capture
-            capture.release()
+            return cv2.VideoCapture(source, cv2.CAP_DSHOW)
         return cv2.VideoCapture(source)
 
     @property
