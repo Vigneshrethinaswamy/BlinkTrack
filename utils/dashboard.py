@@ -105,6 +105,6 @@ def draw_dashboard(
                       (bar_x + int(inner_width * calibration_progress), bar_y + 13),
                       (70, 190, 245), -1)
 
-    footer = "Q quit  |  R reset  |  C calibrate  |  E enhancement  |  S screenshot"
+    footer = "Q quit  |  R reset  |  C calibrate  |  E enhance  |  S save"
     _text(frame, footer, 12, height - 10, 0.38 * scale, (235, 235, 235))
     return frame
