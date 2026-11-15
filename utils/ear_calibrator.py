@@ -37,7 +37,7 @@ class EARCalibrator:
             return self.complete
         left, right = float(left_ear), float(right_ear)
         # Skip obvious closures and invalid landmark measurements.
-        if not (0.18 <= left <= 0.8 and 0.18 <= right <= 0.8):
+        if not (0.10 <= left <= 0.8 and 0.10 <= right <= 0.8):
             return self.complete
         self.left_samples.append(left)
         self.right_samples.append(right)
@@ -51,7 +51,7 @@ class EARCalibrator:
         baseline = (left_baseline + right_baseline) / 2.0
 
         # Relative thresholds accommodate differences in camera distance and eye shape.
-        close_threshold = max(0.12, min(0.30, baseline * 0.72))
+        close_threshold = max(0.06, min(0.30, baseline * 0.72))
         open_threshold = max(close_threshold + 0.02, min(0.40, baseline * 0.86))
         return CalibrationResult(
             baseline, close_threshold, open_threshold, self.required_samples
