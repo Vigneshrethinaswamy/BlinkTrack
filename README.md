@@ -53,7 +53,7 @@ The default `auto` mode only enhances frames when brightness or contrast measure
 
 Press **E** while running to cycle between these modes.
 
-Enhancement uses CLAHE for local contrast, adaptive gamma brightening for dark images, and very mild sharpening when the frame appears soft. It cannot restore eye detail lost to severe blur, focus errors, motion blur or very low resolution. If the camera cannot resolve the eyelids, a better light source or external webcam is still the real fix.
+Enhancement uses CLAHE for local contrast, adaptive gamma brightening for dark images, and very mild sharpening when the frame appears soft. The brightness/contrast/sharpness indicators describe the whole frame, not just the eye region, so treat them as rough diagnostics rather than an autofocus measurement. Enhancement cannot restore eye detail lost to severe blur, focus errors, motion blur or very low resolution. If the camera cannot resolve the eyelids, a better light source or external webcam is still the real fix.
 
 ## Calibration
 
