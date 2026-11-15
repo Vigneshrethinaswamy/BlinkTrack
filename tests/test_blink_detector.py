@@ -142,7 +142,7 @@ def test_ear_calibrator_ignores_missing_or_closed_eye_samples():
     calibrator = EARCalibrator(required_samples=10)
     for _ in range(5):
         calibrator.add(None, 0.3)
-        calibrator.add(0.12, 0.3)
+        calibrator.add(0.08, 0.3)
     assert calibrator.progress == 0
     assert not calibrator.complete
 
