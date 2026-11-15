@@ -6,6 +6,7 @@ from utils.blink_counter import BlinkCounter
 from utils.ear_calibrator import EARCalibrator
 from utils.eye_aspect_ratio import eye_aspect_ratio
 from utils.frame_enhancer import VideoEnhancer
+from video_source import parse_source
 
 
 def test_eye_aspect_ratio_for_open_eye_geometry():
@@ -166,3 +167,10 @@ def test_enhancement_off_returns_original_frame():
 def test_enhancer_rejects_unknown_mode():
     with pytest.raises(ValueError):
         VideoEnhancer("magic")
+
+
+
+def test_video_source_parses_camera_index_and_keeps_video_path():
+    assert parse_source("0") == 0
+    assert parse_source("2") == 2
+    assert parse_source("sample_clip.mp4") == "sample_clip.mp4"
