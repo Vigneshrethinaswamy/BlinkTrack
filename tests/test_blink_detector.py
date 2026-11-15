@@ -1,9 +1,11 @@
-"""Unit tests for EAR geometry and the blink/wink state machine."""
+"""Tests for EAR geometry, counter state and real-time video helpers."""
 import numpy as np
 import pytest
 
 from utils.blink_counter import BlinkCounter
+from utils.ear_calibrator import EARCalibrator
 from utils.eye_aspect_ratio import eye_aspect_ratio
+from utils.frame_enhancer import VideoEnhancer
 
 
 def test_eye_aspect_ratio_for_open_eye_geometry():
@@ -37,9 +39,9 @@ def test_synchronous_fast_blink_counts_once():
 
 def test_asynchronous_bilateral_blink_within_window_counts_once():
     counter = BlinkCounter(sync_window_frames=5)
-    counter.update(0.18, 0.30)  # left closes first
-    counter.update(0.18, 0.18)  # right closes while left remains closed
-    counter.update(0.30, 0.30)  # both reopen
+    counter.update(0.18, 0.30)
+    counter.update(0.18, 0.18)
+    counter.update(0.30, 0.30)
     assert counter.blink_count == 1
     assert counter.left_wink_count == 0
     assert counter.right_wink_count == 0
@@ -115,11 +117,52 @@ def test_reset_clears_counts_and_tracking_state():
 def test_sequential_non_overlapping_winks_are_not_paired_as_a_blink():
     counter = BlinkCounter(sync_window_frames=5)
     counter.update(0.18, 0.30)
-    counter.update(0.30, 0.30)  # left wink ends
-    counter.update(0.30, 0.18)  # right closes after left has reopened
+    counter.update(0.30, 0.30)
+    counter.update(0.30, 0.18)
     counter.update(0.30, 0.30)
     for _ in range(6):
         counter.update(0.30, 0.30)
     assert counter.blink_count == 0
     assert counter.left_wink_count == 1
     assert counter.right_wink_count == 1
+
+
+def test_ear_calibrator_derives_thresholds_from_open_eye_baseline():
+    calibrator = EARCalibrator(required_samples=10)
+    for _ in range(10):
+        calibrator.add(0.30, 0.32)
+    result = calibrator.result()
+    assert calibrator.complete
+    assert result.baseline_ear == pytest.approx(0.31)
+    assert result.close_threshold == pytest.approx(0.2232)
+    assert result.open_threshold == pytest.approx(0.2666)
+
+
+def test_ear_calibrator_ignores_missing_or_closed_eye_samples():
+    calibrator = EARCalibrator(required_samples=10)
+    for _ in range(5):
+        calibrator.add(None, 0.3)
+        calibrator.add(0.12, 0.3)
+    assert calibrator.progress == 0
+    assert not calibrator.complete
+
+
+def test_enhancer_reports_dark_low_contrast_frame():
+    frame = np.zeros((100, 160, 3), dtype=np.uint8)
+    quality = VideoEnhancer.measure_quality(frame)
+    assert quality.brightness == 0
+    assert "low light" in quality.issues
+    assert "low contrast" in quality.issues
+
+
+def test_enhancement_off_returns_original_frame():
+    frame = np.full((100, 160, 3), 70, dtype=np.uint8)
+    enhancer = VideoEnhancer("off")
+    output, quality = enhancer.process(frame)
+    assert output is frame
+    assert quality.brightness == pytest.approx(70)
+
+
+def test_enhancer_rejects_unknown_mode():
+    with pytest.raises(ValueError):
+        VideoEnhancer("magic")
