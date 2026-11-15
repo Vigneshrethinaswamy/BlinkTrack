@@ -32,7 +32,11 @@ class BlinkDetector:
     def __init__(self, close_threshold: float = EAR_CLOSE_THRESHOLD,
                  open_threshold: float = EAR_OPEN_THRESHOLD,
                  sync_window_frames: int = BLINK_SYNC_WINDOW_FRAMES) -> None:
-        self.counter = BlinkCounter(close_threshold, open_threshold, sync_window_frames)
+        self.close_threshold = float(close_threshold)
+        self.open_threshold = float(open_threshold)
+        self.counter = BlinkCounter(
+            self.close_threshold, self.open_threshold, sync_window_frames
+        )
         self.face_mesh = mp.solutions.face_mesh.FaceMesh(
             static_image_mode=False, max_num_faces=1, refine_landmarks=True,
             min_detection_confidence=0.5, min_tracking_confidence=0.5,
@@ -62,7 +66,7 @@ class BlinkDetector:
         right_ear = eye_aspect_ratio(right_points)
         left_state, right_state = self.counter.update(left_ear, right_ear)
 
-        # Different colors make the two independent eye tracks easier to read.
+        # Draw the six measured points rather than a guessed eye-region rectangle.
         for indices, color in ((LEFT_EYE, (255, 190, 0)), (RIGHT_EYE, (0, 220, 255))):
             contour = np.asarray([[int(landmarks[i].x * width), int(landmarks[i].y * height)]
                                   for i in indices], dtype=np.int32)
@@ -72,6 +76,18 @@ class BlinkDetector:
             left_ear, right_ear, left_state, right_state, self.counter.blink_count,
             self.counter.left_wink_count, self.counter.right_wink_count, True,
         )
+
+    def set_thresholds(self, close_threshold: float, open_threshold: float) -> None:
+        """Update EAR thresholds after calibration and discard partial events."""
+        close_threshold = float(close_threshold)
+        open_threshold = float(open_threshold)
+        if close_threshold <= 0 or open_threshold <= close_threshold:
+            raise ValueError("open_threshold must be greater than a positive close_threshold")
+        self.close_threshold = close_threshold
+        self.open_threshold = open_threshold
+        self.counter.close_threshold = close_threshold
+        self.counter.open_threshold = open_threshold
+        self.counter.cancel_pending()
 
     def reset_count(self) -> None:
         self.counter.reset()
