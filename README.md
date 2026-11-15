@@ -1,101 +1,110 @@
 # BlinkTrack — Real-Time Eye Blink and Wink Detection
 
-BlinkTrack is a local computer-vision demo that uses a webcam, OpenCV, and MediaPipe Face Mesh to track each eye independently, count bilateral blinks, and distinguish one-eye winks.
+BlinkTrack is a local computer-vision demo using OpenCV, MediaPipe Face Mesh and NumPy. It can process a webcam stream or a prerecorded video, estimate each eye's EAR independently, count bilateral blinks, and classify one-eye closures as winks.
 
 ## Features
 
-- Real-time webcam capture and face landmark tracking.
-- Separate Eye Aspect Ratio (EAR) measurements for the left and right eyes.
-- Bilateral blink counting with a short synchronization window.
-- Separate left-wink and right-wink counters; closing one eye does not count as a bilateral blink.
-- Hysteresis thresholds to reduce state flicker near the EAR boundary.
-- Live face-tracking status, per-eye EAR/state, blink/wink counts, and FPS.
-- Q/Esc to quit and R to reset all session counts.
-- Local processing only; frames are not uploaded or saved.
-
-## How it works
-
-1. OpenCV captures and mirrors the webcam frame.
-2. MediaPipe Face Mesh estimates facial landmarks.
-3. BlinkTrack extracts six landmarks around each eye and calculates two independent EAR values.
-4. Each eye has its own open/closed state, using a close threshold and a slightly higher reopen threshold.
-5. When both eyes begin closing within the synchronization window and both reopen, one bilateral blink is counted.
-6. If only one eye closes, the event is classified as a left or right wink after the pairing window expires.
-
-EAR = (||p2-p6|| + ||p3-p5||) / (2 * ||p1-p4||)
-
-A lower EAR generally indicates a more closed eye. The left and right values are evaluated separately; they are not averaged before classification.
-
-## Requirements
-
-- Windows, macOS, or Linux
-- Python 3.11
-- A working webcam
+- Webcam and prerecorded-video input.
+- Adaptive frame enhancement for dim or low-contrast webcam images.
+- Live camera-quality diagnostics: brightness, contrast and sharpness.
+- Open-eye EAR calibration using 45 valid samples.
+- Separate left/right EAR, eye state, blink and wink counters.
+- Redesigned dashboard with tracking state, counts, EAR bars, quality flags and FPS.
+- Optional annotated-video recording and dashboard screenshots.
+- Local processing; no frame is uploaded. Recording is off unless explicitly requested.
 
 ## Setup (Windows PowerShell)
 
-In the project folder, run:
+Run from the repository folder:
 
     .\setup_and_run.ps1
 
-If PowerShell blocks script execution, run:
-
-    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-    .\setup_and_run.ps1
-
-The script creates/uses the project virtual environment, installs dependencies, runs unit tests, and launches the webcam demo.
-
-To run manually after setup:
+Or run manually:
 
     .\.venv\Scripts\Activate.ps1
+    python -m pytest -q
     python main.py
 
-Run tests without opening the webcam:
+## Run a webcam
 
-    python -m pytest -q
+    python main.py
 
-## Controls and display
+Default camera settings request 640x480 and process up to 640 pixels wide. If performance is poor, reduce the processing width:
 
-- Q or Esc — quit
-- R — reset blink and wink counts
-- Cyan/yellow eye outlines — separate eye landmark tracks
-- FACE: TRACKED — MediaPipe currently sees a face
+    python main.py --process-width 480
+
+Use a different camera index:
+
+    python main.py --source 1
+
+## Process a video file
+
+    python main.py --source "C:\\Videos\\blink_test.mp4"
+
+BlinkTrack processes the file frame-by-frame and plays it at the video's reported frame rate. The same enhancement, landmarks, EAR and dashboard pipeline is used. Use a clip with a visible, mostly front-facing face for meaningful blink tests.
+
+## Image enhancement
+
+The default `auto` mode only enhances frames when brightness or contrast measurements indicate that it may help.
+
+    python main.py --enhancement auto
+    python main.py --enhancement low-light
+    python main.py --enhancement off
+
+Press **E** while running to cycle between these modes.
+
+Enhancement uses CLAHE for local contrast, adaptive gamma brightening for dark images, and very mild sharpening when the frame appears soft. It cannot restore eye detail lost to severe blur, focus errors, motion blur or very low resolution. If the camera cannot resolve the eyelids, a better light source or external webcam is still the real fix.
 
 ## Calibration
 
-Initial defaults in blink_detector.py:
+1. Start BlinkTrack and sit in your normal position.
+2. Face the camera and keep both eyes comfortably open.
+3. Press **C** and continue looking normally for about 1–2 seconds.
+4. When 45 valid samples are collected, the app derives new EAR close/open thresholds from your open-eye baseline.
 
-- EAR close threshold: 0.21
-- EAR reopen threshold: 0.24
-- Bilateral synchronization window: 5 frames
+Calibration is optional. Do not blink deliberately while the progress bar is collecting samples. Press **C** again to restart calibration.
 
-The reopen threshold is intentionally higher than the close threshold to prevent rapid state switching when EAR fluctuates near the boundary. The synchronization window allows the two eyes to begin closing a few frames apart.
+## Controls
 
-These are starting values, not universal constants. If an eye is consistently classified incorrectly while open, inspect its displayed EAR and adjust the close/open thresholds together. Use steady front-facing lighting and keep the face reasonably centered. Very low frame rates, glasses, occlusion, and extreme head angles can still reduce reliability.
+| Key | Action |
+|---|---|
+| Q / Esc | Quit |
+| R | Reset blink and wink counters |
+| C | Calibrate thresholds with eyes open |
+| E | Cycle enhancement mode |
+| S | Save a dashboard screenshot under `captures/` |
+
+## Optional recording
+
+Nothing is saved by default. To save the annotated output:
+
+    python main.py --record "outputs/blinktrack_annotated.mp4"
+
+For a prerecorded clip, for example:
+
+    python main.py --source "C:\\Videos\\blink_test.mp4" --record "outputs/test_annotated.mp4"
 
 ## Project structure
 
     BlinkTrack/
     ├── main.py
     ├── blink_detector.py
+    ├── video_source.py
     ├── requirements.txt
     ├── requirements-dev.txt
     ├── setup_and_run.ps1
     ├── utils/
-    │   ├── __init__.py
     │   ├── blink_counter.py
-    │   └── eye_aspect_ratio.py
-    ├── tests/
-    │   └── test_blink_detector.py
-    └── README.md
+    │   ├── dashboard.py
+    │   ├── ear_calibrator.py
+    │   ├── eye_aspect_ratio.py
+    │   └── frame_enhancer.py
+    └── tests/
+        └── test_blink_detector.py
 
 ## Limitations
 
-- Single-face, single-webcam demonstration; it does not identify people.
-- A wink is an eye closure classified as unilateral, not an intent or emotion label.
-- EAR is a geometric estimate and can be affected by glasses, lighting, head pose, and landmark jitter.
-- This is an educational computer-vision project, not a medical or drowsiness diagnosis tool.
-
-## Technologies
-
-Python, OpenCV, MediaPipe Face Mesh, NumPy, and pytest.
+- This is a single-face educational demo, not identity recognition or medical/drowsiness diagnosis.
+- EAR and landmark quality depend on face pose, camera focus, lighting, glasses, motion blur and resolution.
+- Enhancement can improve exposure and local contrast, but cannot create detail that the camera did not capture.
+- Video-file playback is not a substitute for live camera testing; a recorded clip's frame rate and quality affect results.
