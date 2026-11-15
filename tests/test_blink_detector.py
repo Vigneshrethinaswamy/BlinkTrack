@@ -1,4 +1,4 @@
-"""Tests for EAR geometry, counter state and real-time video helpers."""
+"""Tests for EAR geometry, blink/wink state and video helper modules."""
 import numpy as np
 import pytest
 
@@ -25,13 +25,16 @@ def test_eye_aspect_ratio_rejects_zero_horizontal_distance():
         eye_aspect_ratio(points)
 
 
-def test_synchronous_fast_blink_counts_once():
-    counter = BlinkCounter(sync_window_frames=5)
+def test_synchronous_one_frame_fast_blink_counts_once():
+    counter = BlinkCounter()
     counter.update(0.30, 0.31)
-    counter.update(0.18, 0.19)
+    counter.update(0.18, 0.19)  # a single closed frame
     assert counter.blink_count == 0
-    counter.update(0.30, 0.31)
-    for _ in range(6):
+    counter.update(0.30, 0.31)  # first open frame: confirmation still pending
+    assert counter.blink_count == 0
+    counter.update(0.30, 0.31)  # second consecutive open frame confirms reopening
+    assert counter.blink_count == 1
+    for _ in range(5):
         counter.update(0.30, 0.31)
     assert counter.blink_count == 1
     assert counter.left_wink_count == 0
@@ -43,26 +46,49 @@ def test_asynchronous_bilateral_blink_within_window_counts_once():
     counter.update(0.18, 0.30)
     counter.update(0.18, 0.18)
     counter.update(0.30, 0.30)
+    assert counter.blink_count == 0
+    counter.update(0.30, 0.30)
     assert counter.blink_count == 1
     assert counter.left_wink_count == 0
     assert counter.right_wink_count == 0
 
 
-def test_left_wink_is_not_counted_as_bilateral_blink():
+@pytest.mark.parametrize("side", ["left", "right"])
+def test_single_wink_counts_once_after_reopening(side):
     counter = BlinkCounter(sync_window_frames=3)
-    counter.update(0.18, 0.30)
-    counter.update(0.30, 0.30)
+    values = {"left": 0.30, "right": 0.30}
+    values[side] = 0.18
+    counter.update(values["left"], values["right"])
+    values[side] = 0.30
+    counter.update(values["left"], values["right"])
+    counter.update(values["left"], values["right"])
     for _ in range(4):
         counter.update(0.30, 0.30)
     assert counter.blink_count == 0
-    assert counter.left_wink_count == 1
+    assert counter.left_wink_count == (1 if side == "left" else 0)
+    assert counter.right_wink_count == (1 if side == "right" else 0)
+
+
+def test_held_one_eye_closure_ignores_single_frame_open_landmark_spikes():
+    counter = BlinkCounter()
+    for frame in range(120):
+        # Simulate a held wink with one noisy frame that briefly looks open
+        # every ten frames, as can happen with a low-quality webcam.
+        right_ear = 0.27 if frame % 10 == 6 else 0.15
+        counter.update(0.30, right_ear)
+    assert counter.blink_count == 0
+    assert counter.left_wink_count == 0
     assert counter.right_wink_count == 0
 
 
-def test_right_wink_is_not_counted_as_bilateral_blink():
+def test_held_one_eye_closure_counts_once_when_it_really_reopens():
     counter = BlinkCounter(sync_window_frames=3)
-    counter.update(0.30, 0.18)
-    counter.update(0.30, 0.30)
+    for _ in range(40):
+        counter.update(0.30, 0.15)
+    assert counter.left_wink_count == 0
+    counter.update(0.30, 0.28)
+    assert counter.left_wink_count == 0
+    counter.update(0.30, 0.28)
     for _ in range(4):
         counter.update(0.30, 0.30)
     assert counter.blink_count == 0
@@ -76,6 +102,8 @@ def test_prolonged_bilateral_closure_counts_only_once_after_reopening():
         counter.update(0.15, 0.16)
     assert counter.blink_count == 0
     counter.update(0.30, 0.31)
+    assert counter.blink_count == 0
+    counter.update(0.30, 0.31)
     assert counter.blink_count == 1
     for _ in range(5):
         counter.update(0.30, 0.31)
@@ -86,6 +114,7 @@ def test_hysteresis_prevents_threshold_chatter():
     counter = BlinkCounter()
     counter.update(0.20, 0.30)
     assert counter.update(0.225, 0.30)[0] == "Closed"
+    assert counter.update(0.245, 0.30)[0] == "Closed"
     assert counter.update(0.245, 0.30)[0] == "Open"
     for _ in range(6):
         counter.update(0.30, 0.30)
@@ -107,6 +136,7 @@ def test_reset_clears_counts_and_tracking_state():
     counter = BlinkCounter()
     counter.update(0.18, 0.18)
     counter.update(0.30, 0.30)
+    counter.update(0.30, 0.30)
     assert counter.blink_count == 1
     counter.reset()
     assert counter.blink_count == 0
@@ -120,6 +150,7 @@ def test_sequential_non_overlapping_winks_are_not_paired_as_a_blink():
     counter.update(0.18, 0.30)
     counter.update(0.30, 0.30)
     counter.update(0.30, 0.18)
+    counter.update(0.30, 0.30)
     counter.update(0.30, 0.30)
     for _ in range(6):
         counter.update(0.30, 0.30)
@@ -167,7 +198,6 @@ def test_enhancement_off_returns_original_frame():
 def test_enhancer_rejects_unknown_mode():
     with pytest.raises(ValueError):
         VideoEnhancer("magic")
-
 
 
 def test_video_source_parses_camera_index_and_keeps_video_path():
