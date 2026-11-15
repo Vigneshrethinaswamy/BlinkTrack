@@ -89,6 +89,9 @@ def draw_dashboard(
     _text(frame, f"Light {quality.brightness:.0f}  Contrast {quality.contrast:.0f}  "
                  f"Sharp {quality.sharpness:.0f}",
           left, y0 + 247, 0.31, (175, 190, 205))
+    _text(frame, f"ENH: {enhancement_mode.upper()}  |  EAR CLOSE/OPEN: "
+                 f"{close_threshold:.3f}/{open_threshold:.3f}",
+          left, y0 + 263, 0.30, (190, 205, 220))
 
     if calibration_progress is not None:
         message = f"CALIBRATING OPEN EYES  {int(calibration_progress * 100)}%"
