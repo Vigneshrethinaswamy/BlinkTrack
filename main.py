@@ -26,8 +26,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--width", type=int, default=640, help="Requested camera width.")
     parser.add_argument("--height", type=int, default=480, help="Requested camera height.")
     parser.add_argument(
-        "--process-width", type=int, default=640,
-        help="Maximum frame width sent to MediaPipe; lower this to improve speed.",
+        "--process-width", type=int, default=480,
+        help="Maximum frame width sent to MediaPipe (480 by default for faster CPU processing).",
     )
     parser.add_argument(
         "--enhancement", choices=VideoEnhancer.MODES, default="auto",
