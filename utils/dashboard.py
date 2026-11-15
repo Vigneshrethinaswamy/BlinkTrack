@@ -90,7 +90,7 @@ def draw_dashboard(
     _text(frame, f"CAMERA: {quality.label}", left, y0 + y(229), 0.39 * scale, quality_color, 1)
     _text(frame, f"Light {quality.brightness:.0f}  Contrast {quality.contrast:.0f}  "
                  f"Sharp {quality.sharpness:.0f}",
-          left, y0 + y(24)7, 0.31 * scale, (175, 190, 205))
+          left, y0 + y(247), 0.31 * scale, (175, 190, 205))
     _text(frame, f"ENH: {enhancement_mode.upper()}  |  EAR CLOSE/OPEN: "
                  f"{close_threshold:.3f}/{open_threshold:.3f}",
           left, y0 + y(263), 0.30 * scale, (190, 205, 220))
