@@ -23,3 +23,7 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Generated captures and annotated video outputs
+captures/
+outputs/
