@@ -39,7 +39,7 @@ Use a different camera index:
 
 ## Process a video file
 
-    python main.py --source "C:\\Videos\\blink_test.mp4"
+    python main.py --source "C:\Videos\blink_test.mp4"
 
 BlinkTrack processes the file frame-by-frame and plays it at the video's reported frame rate. The same enhancement, landmarks, EAR and dashboard pipeline is used. Use a clip with a visible, mostly front-facing face for meaningful blink tests.
 
@@ -82,7 +82,7 @@ Nothing is saved by default. To save the annotated output:
 
 For a prerecorded clip, for example:
 
-    python main.py --source "C:\\Videos\\blink_test.mp4" --record "outputs/test_annotated.mp4"
+    python main.py --source "C:\Videos\blink_test.mp4" --record "outputs/test_annotated.mp4"
 
 ## Project structure
 
