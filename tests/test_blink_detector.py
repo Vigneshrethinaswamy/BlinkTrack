@@ -204,3 +204,19 @@ def test_video_source_parses_camera_index_and_keeps_video_path():
     assert parse_source("0") == 0
     assert parse_source("2") == 2
     assert parse_source("sample_clip.mp4") == "sample_clip.mp4"
+
+
+
+def test_blink_detector_initializes_and_processes_a_frame():
+    from blink_detector import BlinkDetector
+
+    detector = BlinkDetector()
+    try:
+        frame = np.zeros((240, 320, 3), dtype=np.uint8)
+        output, result = detector.process(frame)
+        assert output.shape == frame.shape
+        assert result.face_detected is False
+        assert result.left_ear is None
+        assert result.right_ear is None
+    finally:
+        detector.close()
