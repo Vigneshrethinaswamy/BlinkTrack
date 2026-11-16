@@ -52,7 +52,7 @@ def draw_dashboard(
     calibration_progress: float | None = None,
 ):
     """Render diagnostics in a separate panel image, never over the camera frame."""
-    height, _ = frame.shape[:2]
+    height, camera_width = frame.shape[:2]
     dashboard_width = max(400, int(height * 1.17))
     dashboard = np.full(
         (height, dashboard_width, 3), (18, 24, 34), dtype=np.uint8
@@ -74,7 +74,7 @@ def draw_dashboard(
     face_color = (75, 220, 130) if result.face_detected else (75, 90, 245)
     face_label = "FACE TRACKED" if result.face_detected else "FACE NOT FOUND"
     _text(frame, face_label, left, y0 + y(60), 0.48 * scale, face_color, 2)
-    _text(frame, f"{fps:4.1f} FPS  |  {width}x{height}", left + 155,
+    _text(frame, f"{fps:4.1f} FPS  |  {camera_width}x{height}", left + 155,
           y0 + y(60), 0.36 * scale, (185, 197, 211))
 
     _text(frame, "BLINKS", left, y0 + y(91), 0.36 * scale, (160, 177, 197))
