@@ -72,7 +72,9 @@ def main() -> int:
     previous_time = time.perf_counter()
     is_camera = source.is_camera
     mirror = is_camera and not args.no_mirror
-    display_name = "BlinkTrack | Real-Time Eye Analytics"
+    display_name = "BlinkTrack | Camera"
+    dashboard_name = "BlinkTrack | Dashboard"
+    windows_positioned = False
 
     print(f"Source: {'webcam' if is_camera else source_value}")
     print(f"Input size: {source.frame_size[0]}x{source.frame_size[1]}")
@@ -118,7 +120,7 @@ def main() -> int:
                     )
                     calibrator = None
 
-            frame = draw_dashboard(
+            dashboard_frame = draw_dashboard(
                 frame, result, fps, quality, enhancer.mode,
                 detector.close_threshold, detector.open_threshold,
                 calibrator.progress if calibrator is not None else None,
@@ -142,6 +144,11 @@ def main() -> int:
                 writer.write(frame)
 
             cv2.imshow(display_name, frame)
+            cv2.imshow(dashboard_name, dashboard_frame)
+            if not windows_positioned:
+                cv2.moveWindow(display_name, 60, 60)
+                cv2.moveWindow(dashboard_name, 60 + frame.shape[1] + 24, 60)
+                windows_positioned = True
             delay = 1
             if not is_camera and source.fps > 0:
                 delay = max(1, int(1000 / source.fps))
