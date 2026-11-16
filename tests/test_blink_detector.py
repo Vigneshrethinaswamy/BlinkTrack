@@ -220,3 +220,32 @@ def test_blink_detector_initializes_and_processes_a_frame():
         assert result.right_ear is None
     finally:
         detector.close()
+
+
+
+def test_dashboard_renders_in_separate_image_without_modifying_camera_frame():
+    from types import SimpleNamespace
+    from utils.dashboard import draw_dashboard
+
+    camera = np.full((360, 480, 3), 127, dtype=np.uint8)
+    original = camera.copy()
+    result = SimpleNamespace(
+        face_detected=True,
+        blink_count=3,
+        left_wink_count=1,
+        right_wink_count=0,
+        left_ear=0.28,
+        right_ear=0.29,
+        left_state="Open",
+        right_state="Open",
+    )
+    quality = SimpleNamespace(
+        label="GOOD", issues=[], brightness=120.0,
+        contrast=45.0, sharpness=80.0,
+    )
+
+    panel = draw_dashboard(camera, result, 30.0, quality, "auto", 0.21, 0.24)
+
+    assert panel.shape == (360, 421, 3)
+    assert np.array_equal(camera, original)
+    assert not np.array_equal(panel[:, :], camera[:, :panel.shape[1]])
