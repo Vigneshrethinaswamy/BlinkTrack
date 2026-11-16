@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import cv2
+import numpy as np
 
 from utils.frame_enhancer import FrameQuality
 
@@ -50,19 +51,19 @@ def draw_dashboard(
     open_threshold: float,
     calibration_progress: float | None = None,
 ):
-    """Draw a readable diagnostics panel while keeping most of the camera visible."""
-    height, width = frame.shape[:2]
+    """Render diagnostics in a separate panel image, never over the camera frame."""
+    height, _ = frame.shape[:2]
+    dashboard_width = max(400, int(height * 1.17))
+    dashboard = np.full(
+        (height, dashboard_width, 3), (18, 24, 34), dtype=np.uint8
+    )
     scale = max(0.68, min(1.0, height / 480.0))
     y = lambda value: int(round(value * scale))
-    panel_width = min(330, width - 24)
-    panel_height = min(y(270), height - 24)
+    panel_width = dashboard_width - 24
     x0, y0 = 12, 12
-    x1, y1 = x0 + panel_width, y0 + panel_height
-
-    overlay = frame.copy()
-    cv2.rectangle(overlay, (x0, y0), (x1, y1), (18, 24, 34), -1)
-    cv2.addWeighted(overlay, 0.86, frame, 0.14, 0, frame)
-    cv2.rectangle(frame, (x0, y0), (x1, y1), (70, 84, 102), 1)
+    x1, y1 = x0 + panel_width, height - 12
+    cv2.rectangle(dashboard, (x0, y0), (x1, y1), (70, 84, 102), 1)
+    frame = dashboard
 
     left = x0 + 14
     inner_width = panel_width - 28
